@@ -3826,8 +3826,18 @@ void WebContents::RunJavaScriptDialog(content::WebContents* web_contents,
 
   auto* isolate = JavascriptEnvironment::GetIsolate();
   v8::HandleScope scope(isolate);
+#if 1  // EdgePP
+  auto frame = gin::DataObjectBuilder(isolate)
+                   .Set("url", rfh->GetLastCommittedURL().spec())
+                   .Build();
+#endif  // EdgePP
+
   auto info = gin::DataObjectBuilder(isolate)
+#if 1  // EdgePP
+                  .Set("frame", frame)
+#else
                   .Set("frame", rfh)
+#endif  // EdgePP
                   .Set("dialogType", dialog_type)
                   .Set("messageText", message_text)
                   .Set("defaultPromptText", default_prompt_text)

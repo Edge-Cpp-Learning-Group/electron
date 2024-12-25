@@ -7,8 +7,14 @@ import { parseFeatures } from '@electron/internal/browser/parse-features-string'
 import * as deprecate from '@electron/internal/common/deprecate';
 import { IPC_MESSAGES } from '@electron/internal/common/ipc-messages';
 
+/** EdgePP
 import { app, ipcMain, session, webFrameMain, dialog } from 'electron/main';
 import type { BrowserWindowConstructorOptions, MessageBoxOptions } from 'electron/main';
+**/
+/// EdgePP {
+import { app, ipcMain, session, webFrameMain } from 'electron/main';
+import type { BrowserWindowConstructorOptions } from 'electron/main';
+/// } EdgePP
 
 import * as path from 'path';
 import * as url from 'url';
@@ -867,11 +873,34 @@ WebContents.prototype._init = function () {
     const prefs = this.getLastWebPreferences();
     if (!prefs || prefs.disableDialogs) return callback(false, '');
 
+    /** EdgePP
     // We don't support prompt() for some reason :)
     if (info.dialogType === 'prompt') return callback(false, '');
+    **/
 
     originCounts.set(origin, (originCounts.get(origin) ?? 0) + 1);
 
+    /// EdgePP {
+    const promise = new Promise<any>((resolve, reject) => {
+      this.emit('run-dialog', info, async (success: boolean, input: string, dontShowAgain: boolean) => {
+        if (success) {
+          resolve({ dontShowAgain: !!dontShowAgain, input });
+        } else {
+          reject(Error('User cancelled'));
+        }
+      });
+    });
+
+    try {
+      const result = await promise;
+      callback(true, result.input);
+      if (result.dontShowAgain) originCounts.set(origin, -1);
+    } finally {
+      callback(false, '');
+    }
+    /// } EdgePP
+
+    /** EdgePP
     // TODO: translate?
     const checkbox = originCounts.get(origin)! > 1 && prefs.safeDialogs ? prefs.safeDialogsMessage || 'Prevent this app from creating additional dialogs' : '';
     const parent = this.getOwnerBrowserWindow();
@@ -892,6 +921,7 @@ WebContents.prototype._init = function () {
             cancelId: 0
           }
     };
+
     openDialogs.add(abortController);
     const promise = parent && !prefs.offscreen ? dialog.showMessageBox(parent, options) : dialog.showMessageBox(options);
     try {
@@ -902,6 +932,7 @@ WebContents.prototype._init = function () {
     } finally {
       openDialogs.delete(abortController);
     }
+    **/
   });
 
   this.on('-cancel-dialogs', () => {
